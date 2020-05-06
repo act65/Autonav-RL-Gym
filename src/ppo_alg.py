@@ -41,14 +41,14 @@ memory = Memory()
 ppo = PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma, K_epochs, ACTION_V_MIN, ACTION_V_MAX, eps_clip, dirPath)
 
 class PPO_agent:
-    
+
     def __init__(self, load_ep, env, max_timesteps):
         self.env = env
         self.time_step = 0
         self.past_action = np.array([0., 0.])
         self.max_timesteps = max_timesteps
 
-        
+
         if (load_ep > 0):
             ppo.load_models(load_ep)
 

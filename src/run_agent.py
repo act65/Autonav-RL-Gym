@@ -64,7 +64,7 @@ if __name__ == '__main__':
             running_reward += reward
             if (collision or goal or step == MAX_STEPS - 1):
                 break
-        
+
         env.logEpisode(running_reward, collision, goal, ep_steps)
         print("Episode " + str(ep))
 
