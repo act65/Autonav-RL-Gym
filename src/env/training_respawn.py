@@ -81,11 +81,22 @@ class Respawn():
 
     # Reposition goal and bot in new positions in next module
     def moduleRespawns(self, next_env=False):
-	if next_env:
-        	self.nextModule()
+    	if next_env:
+            self.nextModule()
         self.repositionBot()
         return self.repositionGoal()
 
+    def chooseModuleRespawns(self, module_index):
+        if module_index is None:
+            return self.moduleRespawns(True)
+
+        else:
+            assert module_index < len(self.modules)
+            self.module_index = module_index
+            self.pub_module.publish(self.modules[self.module_index].name)
+            print("Moving to " + self.modules[self.module_index].name + " module")
+            self.repositionBot()
+            return self.repositionGoal()
 
     # Move the goal to its new position
     def repositionGoal(self):

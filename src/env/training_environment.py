@@ -18,8 +18,9 @@ from math import e
 
 
 class Env():
-    def __init__(self, agent_type):
+    def __init__(self, agent_type, module_index=None):
         self.agent_type = agent_type
+        self.module_index = module_index
         self.envs_list = {}
         self.record_goals = 0
         self.sequential_goals = 0
@@ -39,7 +40,7 @@ class Env():
         self.past_distance = 0.
         self.ep_number = 0
         self.log_file = ""
-	self.step_no = 1
+        self.step_no = 1
 
         self.createLog()
 
@@ -204,20 +205,19 @@ class Env():
                 print "scan failed"
                 pass
 
-
         if self.initGoal:
-            self.goal_x, self.goal_y = self.respawn_goal.moduleRespawns(True)
+            self.goal_x, self.goal_y = self.respawn_goal.chooseModuleRespawns(self.module_index)
             self.initGoal = False
-        else:
-            self.goal_x, self.goal_y = self.respawn_goal.moduleRespawns(self.step_no >= 200)
+        elif self.step_no >= 200:
+            self.goal_x, self.goal_y = self.respawn_goal.chooseModuleRespawns(self.module_index)
 
-    	if(self.step_no >= 200):
-    		self.step_no = 1
+        if(self.step_no >= 200):
+            self.step_no = 1
             self.goal_distance = self.getGoalDistace()
         state, done = self.getState(data, [0.,0.])
-    	self.past_distance = state[-1]
-    	#print("resetted")
-    	#print("past d = " + str(self.past_distance))
+        self.past_distance = state[-1]
+        #print("resetted")
+        #print("past d = " + str(self.past_distance))
 
         return np.asarray(state)
 
