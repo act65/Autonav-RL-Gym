@@ -5,7 +5,7 @@ import numpy as np
 from torch.distributions import Categorical
 import sys
 import os
-
+from ppo.storage import Memory
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -43,9 +43,10 @@ class ActorCritic(nn.Module):
         dist = Categorical(action_probs)
         action = dist.sample()
 
-        memory.states.append(state)
-        memory.actions.append(action)
-        memory.logprobs.append(dist.log_prob(action))
+        if memory is not None:
+            memory.states.append(state)
+            memory.actions.append(action)
+            memory.logprobs.append(dist.log_prob(action))
 
         return action.item()
 
@@ -61,44 +62,42 @@ class ActorCritic(nn.Module):
         return action_logprobs, torch.squeeze(state_value), dist_entropy
 
 class PPO:
-    def __init__(self, state_dim, action_dim, action_std, lr, betas, gamma, K_epochs,v_min, v_max, eps_clip, savePath):
+    def __init__(self, state_dim, action_dim, action_std, lr, betas, gamma,
+                 K_epochs, eps_clip, savePath):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
-	self.v_min = v_min
-	self.v_max = v_max
-        self.actions = [[0,0], [0,v_max], [v_max, 0], [v_max, v_max]]
         self.policy = ActorCritic(state_dim, action_dim, action_std).to(device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
         self.policy_old = ActorCritic(state_dim, action_dim, action_std).to(device)
-	self.savePath = savePath
+        self.savePath = savePath
 
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state, memory):
-	def action_unnormalized(action, high, low):
-           #
+    def select_action(self, state, memory=None):
+        def action_unnormalized(action, high, low):
+            #
             action = np.clip(action, -1, 1)
-	    action = low + (action + 1.0) * 0.5 * (high - low)
+            action = low + (action + 1.0) * 0.5 * (high - low)
             return action
         #state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         action = self.policy_old.act(state, memory)
-	#print("action = " + str(action))
-	#print("action = " + str(action[0]))
-	#out = np.array([action_unnormalized(action[0], self.v_max, self.v_min),
+        #print("action = " + str(action))
+        #print("action = " + str(action[0]))
+        #out = np.array([action_unnormalized(action[0], self.v_max, self.v_min),
         #                          action_unnormalized(action[1], self.v_max, self.v_min)])
-	#print("out = " + str(out))
-	#return action
-	#print("action = " + str(action))
-	return self.actions[action]
+        #print("out = " + str(out))
+        #return action
+        #print("action = " + str(action))
+        return action
 
     def save_models(self, episode_count):
         torch.save(self.policy.state_dict(), os.path.join(self.savePath, '{}_policy.pth'.format(episode_count)))
         torch.save(self.policy_old.state_dict(), os.path.join(self.savePath, '{}_policy_old.pth'.format(episode_count)))
 
-    def load_models(self, episode):
+    def load_models(self, episode_count):
         self.policy.load_state_dict(torch.load(os.path.join(self.savePath, '{}_policy.pth'.format(episode_count))))
         self.policy_old.load_state_dict(torch.load(os.path.join(self.savePath, '{}_policy_old.pth'.format(episode_count))))
 

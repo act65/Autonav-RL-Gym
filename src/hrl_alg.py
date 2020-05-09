@@ -28,43 +28,61 @@ random_seed = None
 
 # state params
 state_dim = 28
-action_dim = 4
+
 ACTION_V_MIN = 0  # m/s
 ACTION_V_MAX = 0.4  # m/s
 
-
-class PPO_agent:
-
-    def __init__(self, load_ep, env, max_timesteps, dirPath):
+class HRL_agent:
+    def __init__(self, load_ep, env, max_timesteps, dirPath, n_policies, T=3):
+        self.T = T
         self.memory = Memory()
-        self.ppo = PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, dirPath)
+        path = os.path.join(*dirPath.split('/')[:-1])
+        self.ppo = PPO(state_dim, 7, hidden_dim, lr, betas, gamma,
+                       K_epochs, eps_clip, os.path.join(dirPath, 'hrl'))
+        self.policies = [PPO(state_dim, 4, hidden_dim, lr, betas, gamma,
+                       K_epochs, eps_clip,
+                       os.path.join('/', path, 'ppo-{}'.format(i)))
+                       for i in range(7)]
+
         self.env = env
         self.time_step = 0
-        self.past_action = np.array([0., 0.])
+        self.past_action = np.array([0., .0])  # does the shape of this matter!?
         self.max_timesteps = max_timesteps
         self.actions = [[0,0], [0,ACTION_V_MAX], [ACTION_V_MAX, 0], [ACTION_V_MAX, ACTION_V_MAX]]
+
+        for p in self.policies:
+            p.load_models(199)
 
         if (load_ep > 0):
             self.ppo.load_models(load_ep)
 
-    # called every step
-    def step(self, state, ep):
-
+    def step(self, state, *args):
         self.time_step += 1
-        action = self.actions[self.ppo.select_action(state, self.memory)]
-        state, reward, collision, goal = self.env.step(action, self.past_action)
-
-        self.past_action = action
+        option = self.ppo.select_action(state, self.memory)
+        state, reward, collision, goal = self.multi_step(state, self.policies[option])
         self.memory.rewards.append(reward)
         self.memory.masks.append(float(collision or self.time_step == self.max_timesteps - 1))
 
-        if (self.time_step % update_timestep == 0):
+        if (self.time_step % (update_timestep) == 0):
             self.ppo.update(self.memory)
             self.memory.clear_memory()
             self.time_step = 0
 
         return state, reward, collision, goal
+
+    def multi_step(self, state, option):
+        total_reward = 0
+        total_collisions = False
+        # what is the goal
+        for _ in range(self.T):
+            action = self.actions[option.select_action(state)]
+            state, reward, collision, goal = self.env.step(action, self.past_action)
+            self.past_action = action
+
+            total_reward += reward
+            total_collisions = total_collisions or collision
+
+        return state, total_reward, total_collisions, goal
 
     def save(self, ep):
         self.ppo.save_models(ep)

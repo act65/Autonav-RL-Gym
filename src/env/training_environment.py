@@ -242,10 +242,12 @@ class Env():
         logpath = os.path.dirname(os.path.realpath(__file__)) + "/training_logs"
         self.log_file = logpath + "/" + self.agent_type + "-" + str(int(time.time())) + ".txt"
 
-
         try:
             os.mkdir(logpath)
+            # os.system("sudo mkdir {}".format(logpath))
+            # os.system("sudo chown -R $USER {}".format(logpath))
         except:
+            # raise ValueError('logpath not created')
             pass
 
         logfile = open(self.log_file, "a")

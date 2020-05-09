@@ -19,6 +19,7 @@ from env.training_environment import Env as train_env
 from env.testing_environment import Env as test_env
 from ppo_alg import PPO_agent
 from ddpg_alg import DDPG_agent
+from hrl_alg import HRL_agent
 
 MAX_STEPS = 500
 MAX_EPISODES = 200
@@ -28,8 +29,6 @@ if __name__ == '__main__':
     rospy.init_node('run_agent')
 
     load_ep = 0
-    env = None
-    agent = None
 
     # Choose correct environment
     if (sys.argv[1] == "train"):
@@ -62,6 +61,11 @@ if __name__ == '__main__':
     elif (sys.argv[2] == "ddpg"):
         env = Env("DDPG", module_index)
         agent = DDPG_agent(load_ep, env, MAX_STEPS)
+    elif (sys.argv[2] == "hrl") and (sys.argv[1] == "test"):
+        env = Env("HRL")
+        agent = HRL_agent(load_ep, env, MAX_STEPS, dirPath, 7)
+    else:
+        raise ValueError('enter valid args...')
 
 
     for ep in range(load_ep, MAX_EPISODES):
