@@ -63,7 +63,7 @@ class ActorCritic(nn.Module):
 
 class PPO:
     def __init__(self, state_dim, action_dim, action_std, lr, betas, gamma,
-                 K_epochs, eps_clip, savePath):
+                 K_epochs, eps_clip, save_path, load_path):
         self.lr = lr
         self.betas = betas
         self.gamma = gamma
@@ -72,7 +72,11 @@ class PPO:
         self.policy = ActorCritic(state_dim, action_dim, action_std).to(device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, betas=betas)
         self.policy_old = ActorCritic(state_dim, action_dim, action_std).to(device)
-        self.savePath = savePath
+        self.save_path = save_path
+        self.load_path = load_path
+
+        if load_path is not None:
+            self.load_models()
 
         self.MseLoss = nn.MSELoss()
 
@@ -93,13 +97,13 @@ class PPO:
         #print("action = " + str(action))
         return action
 
-    def save_models(self, episode_count):
-        torch.save(self.policy.state_dict(), os.path.join(self.savePath, '{}_policy.pth'.format(episode_count)))
-        torch.save(self.policy_old.state_dict(), os.path.join(self.savePath, '{}_policy_old.pth'.format(episode_count)))
+    def save_models(self, path):
+        torch.save(self.policy.state_dict(), os.path.join(self.save_path, 'policy.pth'))
+        torch.save(self.policy_old.state_dict(), os.path.join(self.save_path, 'policy_old.pth'))
 
-    def load_models(self, episode_count):
-        self.policy.load_state_dict(torch.load(os.path.join(self.savePath, '{}_policy.pth'.format(episode_count))))
-        self.policy_old.load_state_dict(torch.load(os.path.join(self.savePath, '{}_policy_old.pth'.format(episode_count))))
+    def load_models(self):
+        self.policy.load_state_dict(torch.load(os.path.join(self.load_path, 'policy.pth'), map_location=torch.device(device)))
+        self.policy_old.load_state_dict(torch.load(os.path.join(self.load_path, 'policy_old.pth'), map_location=torch.device(device)))
 
     def update(self, memory):
         # Monte Carlo estimate of state rewards:

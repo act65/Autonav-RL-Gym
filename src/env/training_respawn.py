@@ -91,7 +91,8 @@ class Respawn():
             return self.moduleRespawns(True)
 
         else:
-            assert module_index < len(self.modules)
+            if module_index >= len(self.modules):
+                raise ValueError('module index is {}'.format(module_index))
             self.module_index = module_index
             self.pub_module.publish(self.modules[self.module_index].name)
             print("Moving to " + self.modules[self.module_index].name + " module")

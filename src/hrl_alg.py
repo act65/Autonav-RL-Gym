@@ -28,33 +28,27 @@ random_seed = None
 
 # state params
 state_dim = 28
+action_dim = 4
 
 ACTION_V_MIN = 0  # m/s
 ACTION_V_MAX = 0.4  # m/s
 
 class HRL_agent:
-    def __init__(self, load_ep, env, max_timesteps, dirPath, n_policies, T=3):
+    def __init__(self, load_path, env, max_timesteps, save_path, n_policies, T=3):
         self.T = T
         self.memory = Memory()
-        path = os.path.join(*dirPath.split('/')[:-1])
-        self.ppo = PPO(state_dim, 7, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, os.path.join(dirPath, 'hrl'))
-        self.policies = [PPO(state_dim, 4, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip,
-                       os.path.join('/', path, 'ppo-{}'.format(i)))
-                       for i in range(7)]
+        self.ppo = PPO(state_dim, n_policies, hidden_dim, lr, betas, gamma,
+                       K_epochs, eps_clip, save_path, load_path)
+        self.policies = [PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
+                       K_epochs, eps_clip, save_path,
+                       os.path.join(load_path, 'ppo-{}'.format(i)))
+                       for i in range(n_policies)]
 
         self.env = env
         self.time_step = 0
         self.past_action = np.array([0., .0])  # does the shape of this matter!?
         self.max_timesteps = max_timesteps
         self.actions = [[0,0], [0,ACTION_V_MAX], [ACTION_V_MAX, 0], [ACTION_V_MAX, ACTION_V_MAX]]
-
-        for p in self.policies:
-            p.load_models(199)
-
-        if (load_ep > 0):
-            self.ppo.load_models(load_ep)
 
     def step(self, state, *args):
         self.time_step += 1

@@ -34,19 +34,15 @@ ACTION_V_MAX = 0.4  # m/s
 
 
 class PPO_agent:
-
-    def __init__(self, load_ep, env, max_timesteps, dirPath):
+    def __init__(self, load_path, env, max_timesteps, save_path):
         self.memory = Memory()
         self.ppo = PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, dirPath)
+                       K_epochs, eps_clip, save_path, load_path)
         self.env = env
         self.time_step = 0
         self.past_action = np.array([0., 0.])
         self.max_timesteps = max_timesteps
         self.actions = [[0,0], [0,ACTION_V_MAX], [ACTION_V_MAX, 0], [ACTION_V_MAX, ACTION_V_MAX]]
-
-        if (load_ep > 0):
-            self.ppo.load_models(load_ep)
 
     # called every step
     def step(self, state, ep):

@@ -2,6 +2,6 @@
   <arg name="agent" default="ddpg"/>
   <arg name="run_type" default="train"/>
   <arg name="load_ep" default=""/>
-  <node pkg="project" type="run_agent.py" name="$(arg run_type)" output="screen" args="$(arg run_type) $(arg agent) $(arg load_ep)"/>
+  <node pkg="project" type="run_agent.py" name="$(arg run_type)" output="screen" args="$(arg env_type) $(arg agent_type) $(arg module_index) $(arg save_path) $(arg load_path)"/>
   <node pkg="project"  type="moving_obst_agent.py" name="moving_obstacle" output="screen" />
 </launch>
