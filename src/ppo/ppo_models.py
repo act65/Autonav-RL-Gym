@@ -9,6 +9,8 @@ from ppo.storage import Memory
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+def normalise(x):
+    return (x - x.mean(0)) / (x.std(0) + 1e-5)
 
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, n_latent_var):
@@ -31,7 +33,7 @@ class ActorCritic(nn.Module):
                 nn.ReLU(),
                 nn.Linear(n_latent_var, n_latent_var),
                 nn.ReLU(),
-                nn.Linear(n_latent_var, 1)
+                nn.Linear(n_latent_var, action_dim)
                 )
 
     def forward(self):
@@ -50,6 +52,9 @@ class ActorCritic(nn.Module):
 
         return action.item()
 
+    def value(self, state):
+        return self.value_layer(state)
+
     def evaluate(self, state, action):
         action_probs = self.action_layer(state)
         dist = Categorical(action_probs)
@@ -57,7 +62,7 @@ class ActorCritic(nn.Module):
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
 
-        state_value = self.value_layer(state)
+        state_value = self.value_layer(state)[:, action]
 
         return action_logprobs, torch.squeeze(state_value), dist_entropy
 
@@ -97,6 +102,9 @@ class PPO:
         #print("action = " + str(action))
         return action
 
+    def value(self, state):
+        return self.policy.value(torch.from_numpy(state).float().to(device)).detach()
+
     def save_models(self, path):
         torch.save(self.policy.state_dict(), os.path.join(self.save_path, 'policy.pth'))
         torch.save(self.policy_old.state_dict(), os.path.join(self.save_path, 'policy_old.pth'))
@@ -107,15 +115,15 @@ class PPO:
 
     def update(self, memory):
         # Monte Carlo estimate of state rewards:
-        rewards = []
+        returns = []
         discounted_reward = 0
         for i in reversed(range(len(memory.rewards))):
             discounted_reward = memory.rewards[i] + (self.gamma * discounted_reward)*(1-memory.masks[i])
-            rewards.insert(0, discounted_reward)
+            returns.insert(0, discounted_reward)
 
         # Normalizing the rewards:
-        rewards = torch.tensor(rewards).to(device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
+        returns = torch.tensor(returns).to(device)
+        # returns = normalise(returns)  # (returns - returns.mean()) / (returns.std() + 1e-5)
 
         # convert list to tensor
         old_states = torch.stack(memory.states).to(device).detach()
@@ -131,10 +139,11 @@ class PPO:
             ratios = torch.exp(logprobs - old_logprobs.detach())
 
             # Finding Surrogate Loss:
-            advantages = rewards - state_values.detach()
+            advantages = normalise(state_values - self.policy.value(old_states).mean(1)).detach()
+            # advantages = returns - state_values.detach()  # ????
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
-            loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
+            loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, returns) - 0.01*dist_entropy
 
             # take gradient step
             self.optimizer.zero_grad()

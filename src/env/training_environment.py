@@ -241,6 +241,7 @@ class Env():
     def createLog(self):
         logpath = os.path.dirname(os.path.realpath(__file__)) + "/training_logs"
         self.log_file = logpath + "/" + self.agent_type + "-" + str(int(time.time())) + ".txt"
+        print('logging to {}'.format(logpath))
 
         try:
             os.mkdir(logpath)

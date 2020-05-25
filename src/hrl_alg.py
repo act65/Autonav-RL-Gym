@@ -38,11 +38,19 @@ class HRL_agent:
         self.T = T
         self.memory = Memory()
         self.ppo = PPO(state_dim, n_policies, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, save_path, load_path)
-        self.policies = [PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, save_path,
-                       os.path.join(load_path, 'ppo-{}'.format(i)))
-                       for i in range(n_policies)]
+                       K_epochs, eps_clip, save_path, None)
+
+        if load_path is None:
+            self.policies = [PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
+                           K_epochs, eps_clip, save_path,
+                           None)
+                           for _ in range(n_policies)]
+        else:
+            self.policies = [PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
+                           K_epochs, eps_clip, save_path,
+                           os.path.join(load_path, 'ppo-{}'.format(i)))
+                           for i in range(n_policies)]
+
 
         self.env = env
         self.time_step = 0
@@ -75,6 +83,8 @@ class HRL_agent:
 
             total_reward += reward
             total_collisions = total_collisions or collision
+
+        print(goal)
 
         return state, total_reward, total_collisions, goal
 

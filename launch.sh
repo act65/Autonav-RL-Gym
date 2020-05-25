@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #$1 train or test
-#$2 agent type (ddpg, ppo, nav (for turtlebot3 navigation package)
+#$2 agent type (ddpg, ppo, nav-for turtlebot3 navigation package)
 #$3 headless or not
 #$4 module_index
-#$5 load path (optional)
-#$6 save path (optional)
+#$5 save path
+#$6 load path
 
 gnome-terminal -e "./launch/launch_env.sh $1 $2 $3"
 sleep 4
