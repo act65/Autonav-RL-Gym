@@ -247,9 +247,8 @@ class Env():
             os.mkdir(logpath)
             # os.system("sudo mkdir {}".format(logpath))
             # os.system("sudo chown -R $USER {}".format(logpath))
+            logfile = open(self.log_file, "a")
+            logfile.close
         except:
             # raise ValueError('logpath not created')
             pass
-
-        logfile = open(self.log_file, "a")
-        logfile.close
