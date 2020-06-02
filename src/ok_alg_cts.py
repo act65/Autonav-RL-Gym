@@ -12,6 +12,7 @@ from ppo.storage import Memory
 from std_msgs.msg import Float32
 # from env.training_environment import Env
 from ppo.ppo_models import PPO
+from ddpg_alg import MemoryBuffer, DDPG
 
 import torch
 
@@ -34,12 +35,11 @@ action_dim = 4
 ACTION_V_MIN = 0  # m/s
 ACTION_V_MAX = 0.4  # m/s
 
-class OK_agent:
-    def __init__(self, load_path, env, max_timesteps, save_path, n_policies, T=3):
-        self.T = T
-        self.memory = Memory()
-        self.ppo = PPO(state_dim, n_policies, hidden_dim, lr, betas, gamma,
-                       K_epochs, eps_clip, save_path, load_path)
+class OK_agent_cts:
+    def __init__(self, load_path, env, max_timesteps, save_path, n_policies):
+
+        self.ram = MemoryBuffer(10000)
+        self.ddpg = DDPG(state_dim, n_policies, self.ram)
 
         if load_path is None:
             self.policies = [PPO(state_dim, action_dim, hidden_dim, lr, betas, gamma,
@@ -53,27 +53,30 @@ class OK_agent:
                            for i in range(n_policies)]
 
         self.env = env
+        self.var_v = 1.0
         self.time_step = 0
         self.past_action = np.array([0., .0])
         self.max_timesteps = max_timesteps
         self.env_actions = [[0,0], [0,ACTION_V_MAX], [ACTION_V_MAX, 0], [ACTION_V_MAX, ACTION_V_MAX]]
-        self.weight_actions = [np.reshape(np.array(i), n_policies) for i in itertools.product([-1, 0, 1], repeat = n_policies)]
-        # print(len(self.weight_actions)) = 2187
 
         # advantage over HRL with options over pretrained policies
         # can use combinations of the policies
 
     def step(self, state, *args):
         self.time_step += 1
-        a = self.ppo.select_action(state, self.memory)
-        state, reward, collision, goal = self.option_keyboard(state, self.weight_actions[a])
-        self.memory.rewards.append(reward)
-        self.memory.masks.append(float(collision or self.time_step == self.max_timesteps - 1))
+        action = self.ddpg.get_exploration_action(np.float32(state), self.var_v)
 
-        if (self.time_step % (update_timestep) == 0):
-            self.ppo.update(self.memory)
-            self.memory.clear_memory()
+        next_state, reward, collision, goal = self.option_keyboard(state, 2*action-1)
+
+        self.ram.add(state, action, reward, np.float32(next_state))
+
+        if self.ram.len >= 128:
+            self.var_v = max([self.var_v*0.999, 0.10])
+            self.ddpg.optimizer()
+
+        if (collision or goal or self.time_step >= self.max_timesteps):
             self.time_step = 0
+            print("Buffer size: " + str(self.ram.len))
 
         return state, reward, collision, goal
 

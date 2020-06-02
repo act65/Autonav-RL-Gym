@@ -7,20 +7,16 @@ import random
 import time
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from std_msgs.msg import Float32
-import torch
-import torch.nn.functional as F
-import gc
-import torch.nn as nn
-from collections import deque
-from ppo.storage import Memory
-from ppo.ppo_models import PPO
+
 from env.training_environment import Env as train_env
 from env.testing_environment import Env as test_env
+
 from ppo_alg import PPO_agent
 from ddpg_alg import DDPG_agent
 from hrl_alg import HRL_agent
 from ok_alg import OK_agent
+from ok_alg_cts import OK_agent_cts
+
 import argparse
 
 MAX_STEPS = 500
@@ -77,6 +73,10 @@ if __name__ == '__main__':
     elif (args.agent_type == "ok") and (args.env_type == "test"):
         env = Env("ok")
         agent = OK_agent(args.load_path, env, MAX_STEPS, args.save_path, 7)
+    elif (args.agent_type == "okcts") and (args.env_type == "test"):
+        env = Env("okcts")
+        agent = OK_agent_cts(args.load_path, env, MAX_STEPS, args.save_path, 7)
+
     else:
         raise ValueError('enter valid args...')
 
