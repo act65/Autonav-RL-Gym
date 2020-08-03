@@ -17,7 +17,7 @@ from tf.transformations import quaternion_from_euler
 
 
 class Respawn():
-    def __init__(self):
+    def __init__(self, module_index=-1):
 
         # Tracking current module being trained in
         self.modules = [
@@ -29,7 +29,7 @@ class Respawn():
             module_moving_obstacles(),
             module_gate()
             ]
-        self.module_index = -1
+        self.module_index = module_index
         self.pub_module = rospy.Publisher('current_module', String, queue_size = 1)
 
         # Get goal box model

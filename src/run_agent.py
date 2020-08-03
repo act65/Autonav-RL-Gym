@@ -19,6 +19,11 @@ from ok_alg_cts import OK_agent_cts
 
 import argparse
 
+# sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+# dirPath = os.path.dirname(os.path.realpath(__file__))
+env_module_id = 2
+dirPath = '/tmp/env-{}/'.format(env_module_id)
+
 MAX_STEPS = 500
 MAX_EPISODES = 200
 
